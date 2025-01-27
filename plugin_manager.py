@@ -31,8 +31,11 @@ import logging
 
 PLUGIN_MANAGER_VERSION = "1.1.0"
 REPOSITORY_URL = "https://github.com/bombsquad-community/plugin-manager"
-# https://github.com/bombsquad-community/plugin-manager/issues/new?template=bug_report.md
-PLUGIN_ISSUE_TEMPLATE = "bug_report.md"
+
+PLUGIN_ISSUE_TEMPLATE = "plugin-bug-report.md"
+PLUGIN_MANAGER_ISSUE_TEMPLATE = "bug-report.md" # UNUSED
+GITHUB_ISSUE_META = "{repository_url}/issues/new?template={issue_template}" 
+
 # Current tag can be changed to "staging" or any other branch in
 # plugin manager repo for testing purpose.
 CURRENT_TAG = "main"
@@ -995,16 +998,17 @@ class MoreWindow(popup.PopupWindow):
         self.scale_origin = origin_widget.get_screen_space_center()
         bui.getsound('swish').play()
         s = 1.25 if _uiscale is babase.UIScale.SMALL else 1.39 if _uiscale is babase.UIScale.MEDIUM else 1.67
-        width = 400 * s
+        width = 200 * s
         height = width * 0.8
-        color = (1, 1, 1)
-        text_scale = 0.7 * s
+        btn_size = (40, 40)
+        buffer = btn_size[0]*1.5
+        color = (0.6, 0.53, 0.63)
+        text_scale = 0.75 * s
         self._transition_out = 'out_scale'
         transition = 'in_scale'
         for value in plugin.info['versions'].values():
             if value['api_version'] == _app_api_version:
-                released_on = value['released_on']
-        print(released_on)
+                last_updated_on = value['released_on']
 
         self._root_widget = bui.containerwidget(
             size=(width, height),
@@ -1014,65 +1018,86 @@ class MoreWindow(popup.PopupWindow):
                    if _uiscale is babase.UIScale.MEDIUM else 1.0),
             scale_origin_stack_offset=self.scale_origin)
 
-        back_button = bui.buttonwidget(
-            parent=self._root_widget,
-            position=(width * 0.1, height * 0.87),
-            size=(60, 60),
-            scale=0.8,
-            label=babase.charstr(babase.SpecialChar.BACK),
-            button_type='backSmall',
-            on_activate_call=self._back)
-        bui.containerwidget(edit=self._root_widget, cancel_button=back_button)
+        date_pos_x = btn_size[0]
+        date_pos_y = height * 0.75
 
         bui.textwidget(
             parent=self._root_widget,
-            position=(width/4, height/1.5),
-            text=f"RELEASED ON: {released_on}",
+            scale=text_scale * 0.7,
+            position=(date_pos_x,date_pos_y),
+            text=f"Last updated on: {last_updated_on}",
             h_align='left', v_align='center')
+        
+        source_text_pos_y = date_pos_y - buffer
 
         bui.textwidget(
             parent=self._root_widget,
-            position=(width/4, height/2),
+            scale=text_scale * 0.6,
+            position=(date_pos_x,source_text_pos_y),
             text="Source: ",
             h_align='left', v_align='center')
-
-        source_btn_pos_x = (390 if _uiscale is babase.UIScale.SMALL else
-                            450 if _uiscale is babase.UIScale.MEDIUM else 440)
-        source_btn_pos_y = (100 if _uiscale is babase.UIScale.SMALL else
-                            110 if _uiscale is babase.UIScale.MEDIUM else 120)
+        source_btn_x = date_pos_x + buffer * 1.5
         source_button = bui.buttonwidget(
             parent=self._root_widget,
             autoselect=True,
-            position=(width/2-25, height/2-25),
-            size=(80, 80),
+            position=(source_btn_x, source_text_pos_y),
+            size=btn_size,
             button_type="square",
             label="",
-            color=(0.6, 0.53, 0.63),
-            on_activate_call=lambda: bui.open_url(self.plugin.view_url))
+            color=color,
+            on_activate_call=lambda: bui.open_url(plugin.view_url))
         bui.imagewidget(
             parent=self._root_widget,
-            position=(width/2-25, height/2-25),
-            size=(80, 80),
+            position=(source_btn_x, source_text_pos_y),
+            size=btn_size,
             color=(0.8, 0.95, 1),
             texture=bui.gettexture("file"),
             draw_controller=source_button)
+        # bui.textwidget(
+        #     parent=self._root_widget,
+        #     position=(source_btn_x, source_text_pos_y),
+        #     text="Source",
+        #     size=(20, 20),
+        #     draw_controller=source_button,
+        #     color=(1, 1, 1, 1),
+        #     rotate=335,
+        #     scale=0.6)
+        
+        source_text_pos_y -= buffer
         bui.textwidget(
             parent=self._root_widget,
-            position=(width/2-16, height/2-2),
-            text="Source",
-            size=(20, 20),
-            draw_controller=source_button,
-            color=(1, 1, 1, 1),
-            rotate=25,
-            scale=0.7)
-
-        bui.buttonwidget(
+            scale=text_scale * 0.6,
+            position=(date_pos_x,source_text_pos_y),
+            text="Report \na bug: ",
+            h_align='left', v_align='center')
+        report_btn = bui.buttonwidget(
             parent=self._root_widget,
-            size=(60, 60),
-            label="report a bug",
+            position=(source_btn_x, source_text_pos_y),
+            size=btn_size,
+            button_type="square",
+            color=color,
+            label="",
             on_activate_call=babase.Call(
-                bui.open_url, REPOSITORY_URL + "/issues/new?template=" + PLUGIN_ISSUE_TEMPLATE)
+                bui.open_url, GITHUB_ISSUE_META.format(repository_url=REPOSITORY_URL, 
+                                                       issue_template=PLUGIN_ISSUE_TEMPLATE)
+                )
         )
+        bui.imagewidget(
+            parent=self._root_widget,
+            position=(source_btn_x, source_text_pos_y),
+            size=btn_size,
+            color=(0.8, 0.95, 1),
+            texture=bui.gettexture("githubLogo"),
+            draw_controller=report_btn)
+        back_button = bui.buttonwidget(
+                    parent=self._root_widget,
+                    position=(width * 0.1, height * 0.87),
+                    size=(60, 60),
+                    scale=0.8,
+                    label=babase.charstr(babase.SpecialChar.BACK),
+                    button_type='backSmall',
+                    on_activate_call=self._back)
+        bui.containerwidget(edit=self._root_widget, cancel_button=back_button)
 
     def _back(self) -> None:
         bui.getsound('swish').play()
